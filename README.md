@@ -14,18 +14,8 @@ This Metasploit auxiliary module automatically detects Local File Inclusion (LFI
 - **RFI Testing**: Checks for Remote File Inclusion when allow_url_include is enabled
 - **Comprehensive Reporting**: Creates detailed notes and vulnerability records in Metasploit database
 
-## 🔧 Installation
-
-1. Save the module to your Metasploit modules directory:
-```bash
-mkdir -p ~/.msf4/modules/auxiliary/scanner/http/
-cp lfi2rce.rb ~/.msf4/modules/auxiliary/scanner/http/
 
 
-Start Metasploit and reload modules:
-
-msfconsole
-reload_all
 
 🚀 Usage
 Basic Scan
@@ -110,3 +100,17 @@ This tool is for educational and authorized security testing purposes only. User
 📄 License
 This module is part of the Metasploit Framework and is licensed under the same terms.
 
+
+
+## 🔧 Installation
+
+1. Save the module to your Metasploit modules directory:
+```bash
+mkdir -p ~/.msf4/modules/auxiliary/scanner/http/
+cp lfi2rce.rb ~/.msf4/modules/auxiliary/scanner/http/
+
+
+Start Metasploit and reload modules:
+
+msfconsole
+reload_all
